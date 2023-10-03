@@ -19,13 +19,13 @@ internal val DEFAULT_DATE_STRING_FORMATTER by lazy {
     DateTimeFormatter.ISO_LOCAL_DATE.withLocale(Locale.ROOT).withZone(ZoneId.systemDefault())
 }
 internal val DEFAULT_DATE_TIME_STRING_FORMATTER by lazy {
-    DateTimeFormatter.ISO_LOCAL_DATE_TIME.withLocale(Locale.ROOT).withZone(ZoneId.systemDefault())
+    DateTimeFormatter.ISO_LOCAL_DATE_TIME.withLocale(Locale.ROOT).withZone(ZoneOffset.UTC)
 }
 internal val SQLITE_AND_ORACLE_DATE_TIME_STRING_FORMATTER by lazy {
     DateTimeFormatter.ofPattern(
         "yyyy-MM-dd HH:mm:ss.SSS",
         Locale.ROOT
-    ).withZone(ZoneId.systemDefault())
+    ).withZone(ZoneOffset.UTC)
 }
 
 internal val ORACLE_TIME_STRING_FORMATTER by lazy {
@@ -241,7 +241,9 @@ class JavaInstantColumnType : ColumnType(), IDateColumnType {
         }
 
         return when {
-            currentDialect is OracleDialect || currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle ->
+            currentDialect is OracleDialect || currentDialect.h2Mode == H2Dialect.H2CompatibilityMode.Oracle
+            || currentDialect is SQLiteDialect
+            ->
                 "'${SQLITE_AND_ORACLE_DATE_TIME_STRING_FORMATTER.format(instant)}'"
             else -> "'${DEFAULT_DATE_TIME_STRING_FORMATTER.format(instant)}'"
         }
@@ -254,7 +256,7 @@ class JavaInstantColumnType : ColumnType(), IDateColumnType {
     }
 
     override fun readObject(rs: ResultSet, index: Int): Any? {
-        return rs.getTimestamp(index)
+        return rs.getTimestamp(index, Calendar.getInstance(TimeZone.getTimeZone(ZoneOffset.UTC)))
     }
 
     override fun notNullValueToDB(value: Any): Any = when {
